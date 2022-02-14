@@ -87,8 +87,8 @@ start:
 			globalCursor++;
 			goto start;
 		}	
-		
-		if (((int)curLine[symbolIndex]) < 0x40)
+		else
+		if (((int)curLine[symbolIndex]) == ' ') 
 		{
 			var innerCursor = 0;
 			var curWord = curLine[lastWordEndIndex..symbolIndex];
@@ -149,7 +149,7 @@ start:
 			lastWordEndIndex = ++symbolIndex;
 			goto splitStart;
 		}
-		
+		else
 		if ((int)curLine[symbolIndex] >= 0x41 && (int)curLine[symbolIndex] < 0x5A)
 		{
 			var oldChar_UTF16LE = (int)curLine[symbolIndex];
@@ -160,7 +160,12 @@ start:
 			symbolIndex++;
 			goto splitStart;
 		}
-
+		else
+		if ((int)curLine[symbolIndex] < 0x40)
+		{
+			curLine = curLine[0..symbolIndex] + curLine[(symbolIndex+1)..curLine.Length];
+			goto splitStart;
+		}
 		symbolIndex++;
 		goto splitStart;
 
@@ -242,38 +247,23 @@ endSort:
 		ouputString = "";
 		if(globalConcatCursor == globalCursor - 1)
 			goto end;
-
 		ouputString += a[globalConcatCursor] + " - ";
 
-//FIND INDEX OF INITIAL LIST
-
-
-
-var index = 0;
-int outputIndexFindCounter = 0;
-outputIndexFindLoop:
-if (b[outputIndexFindCounter] == globalConcatCursor)
-{
-	index = outputIndexFindCounter;
-	goto concatInner;
-}
-if (outputIndexFindCounter++ < b.Length - 1)
-	goto outputIndexFindLoop;
-
-concatInner:
-
-var infoInnerCursor = 0;
-concatInnerLoop:
-	if(wordsInfo[index, infoInnerCursor] != 0)
-	{
-		ouputString += wordsInfo[index, infoInnerCursor] + " ";
-		infoInnerCursor++;
-		goto concatInnerLoop;
-	}
-			
-	output[finalWordCounter++] = $"{ouputString}";
-	globalConcatCursor++;
-	goto concatInfoLoop;
+		int startingWordIndex = globalConcatCursor,
+			pageCounter = 0;
+		var transformedListIndex = b[startingWordIndex];
+		
+		concatInnerLoop:
+			if (wordsInfo[transformedListIndex, pageCounter] != 0)
+			{
+				ouputString += wordsInfo[transformedListIndex, pageCounter] + " ";
+				pageCounter++;
+				goto concatInnerLoop;
+			}
+					
+			output[finalWordCounter++] = $"{ouputString}";
+			globalConcatCursor++;
+			goto concatInfoLoop;
 
 end:
 	File.WriteAllLines("out.txt", output);
