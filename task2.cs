@@ -19,10 +19,9 @@ start:
 	else 
 		LineCount++;
 	
-	if(LineCount > PAGE_SIZE)
+	if(LineCount % PAGE_SIZE == 0)
 	{
 		curPage++;
-		LineCount = 1;
 	}
 
 	var lastWordEndIndex = 0;
@@ -36,7 +35,8 @@ start:
 		{
 			var innerCursor = 0;
 			var curWord = curLine[lastWordEndIndex..symbolIndex];
-			
+			if(curWord.Length < 4)
+				goto start;
 
 			repeatWordCheck:
 				if(innerCursor == globalCursor)
@@ -53,12 +53,14 @@ start:
 				var innerPageCursor = 0;
 				
 				updatePageNumberLoop:
+					if(innerPageCursor == WORD_REPEAT_LIMIT - 1)
+						goto start;
 					if(wordsInfo[innerCursor,innerPageCursor] == curPage)
-						goto nextLine;
+						goto start;
 					if(wordsInfo[innerCursor,innerPageCursor] == 0)
 					{
 						wordsInfo[innerCursor,innerPageCursor] = curPage;
-						goto nextLine;
+						goto start;
 					}
 					innerPageCursor++;
 					goto updatePageNumberLoop;
@@ -90,7 +92,8 @@ start:
 		{
 			var innerCursor = 0;
 			var curWord = curLine[lastWordEndIndex..symbolIndex];
-			
+			if(curWord.Length < 4)
+				goto nextWordNotChanged;
 
 			repeatWordCheck:
 				if(innerCursor == globalCursor)
@@ -107,12 +110,14 @@ start:
 				var innerPageCursor = 0;
 				
 				updatePageNumberLoop:
+					if(innerPageCursor == WORD_REPEAT_LIMIT - 1)
+						goto nextWordNotChanged;
 					if(wordsInfo[innerCursor,innerPageCursor] == curPage)
-						goto nextWord;
+						goto nextWordNotChanged;
 					if(wordsInfo[innerCursor,innerPageCursor] == 0)
 					{
 						wordsInfo[innerCursor,innerPageCursor] = curPage;
-						goto nextWord;
+						goto nextWordNotChanged;
 					}
 					innerPageCursor++;
 					goto updatePageNumberLoop;
@@ -138,6 +143,10 @@ start:
 			nextWord:
 			lastWordEndIndex = ++symbolIndex;
 			globalCursor++;
+			goto splitStart;
+
+			nextWordNotChanged:
+			lastWordEndIndex = ++symbolIndex;
 			goto splitStart;
 		}
 		
