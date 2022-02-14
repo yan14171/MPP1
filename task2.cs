@@ -35,7 +35,7 @@ start:
 		{
 			var innerCursor = 0;
 			var curWord = curLine[lastWordEndIndex..symbolIndex];
-			if(curWord.Length < 4)
+			if(curWord.Length < 5)
 				goto start;
 
 			repeatWordCheck:
@@ -88,11 +88,11 @@ start:
 			goto start;
 		}	
 		
-		if (curLine[symbolIndex] == ' ')
+		if (((int)curLine[symbolIndex]) < 0x40)
 		{
 			var innerCursor = 0;
 			var curWord = curLine[lastWordEndIndex..symbolIndex];
-			if(curWord.Length < 4)
+			if(curWord.Length < 5)
 				goto nextWordNotChanged;
 
 			repeatWordCheck:
@@ -150,7 +150,7 @@ start:
 			goto splitStart;
 		}
 		
-		if ((int)curLine[symbolIndex] > 0x41 && (int)curLine[symbolIndex] < 0x5A)
+		if ((int)curLine[symbolIndex] >= 0x41 && (int)curLine[symbolIndex] < 0x5A)
 		{
 			var oldChar_UTF16LE = (int)curLine[symbolIndex];
 			var newChar_UTF16LE =  oldChar_UTF16LE + 0x20;
@@ -167,6 +167,72 @@ start:
 
 
 	splitEnd:
+
+		int outerCounter = 0;
+		var a = new string[globalCursor];
+		var c = wordsInfo;
+		var b = new int[a.Length];
+
+	int counter = 0;
+	fillLoop:
+		b[counter] = counter;
+		a[counter] = globalWords[counter];
+		if(counter++ != b.Length - 1)
+		goto fillLoop;
+
+	outerLoop:
+	int innerCounter = outerCounter + 1; 
+	if(innerCounter == a.Length)
+		goto endSort;
+	innerLoop:
+	
+	//COMPARE
+		bool compareResult = false;
+		string aS = a[outerCounter];
+		string bS = a[innerCounter];
+		
+		var n = aS.Length < bS.Length ? aS.Length : bS.Length;
+		int compareCounter = 0;
+		compareLoop:
+		if(aS[compareCounter] > bS[compareCounter])
+		{
+			compareResult = true;
+			goto compareEnd;
+		}
+		if(aS[compareCounter] < bS[compareCounter])
+		{
+			compareResult = false;
+			goto compareEnd;
+		}
+		if(compareCounter++ < n - 1)
+		goto compareLoop;
+		compareResult = false;
+		
+		compareEnd:
+	//COMPARE END	
+		if(compareResult)
+		{
+	//SWAP
+			string temp = "";
+			int tempIndex = 0;
+	
+			temp = a[outerCounter];
+			a[outerCounter] = a[innerCounter];
+			a[innerCounter] = temp;
+
+			tempIndex = b[outerCounter];
+			b[outerCounter] = b[innerCounter];
+			b[innerCounter] = tempIndex;
+	//SWAP END
+		}
+		if(innerCounter++ < a.Length - 1)	
+			goto innerLoop;
+	
+	if(outerCounter++ < a.Length - 1)
+	goto outerLoop;
+
+endSort:
+	var finalWordCounter = 0;
 	var output = new string[globalCursor];
 	var ouputString = "";
 	var globalConcatCursor = 0;
@@ -174,24 +240,40 @@ start:
 	concatInfoLoop:
 
 		ouputString = "";
-		if(globalConcatCursor == LineCount)
+		if(globalConcatCursor == globalCursor - 1)
 			goto end;
 
-		ouputString += globalWords[globalConcatCursor] + " - ";
+		ouputString += a[globalConcatCursor] + " - ";
 
-		var infoInnerCursor = 0;
+//FIND INDEX OF INITIAL LIST
 
-		concatInnerLoop:
-			if(wordsInfo[globalConcatCursor,infoInnerCursor] != 0)
-				{
-					ouputString += wordsInfo[globalConcatCursor, infoInnerCursor] + " ";
-					infoInnerCursor++;
-					goto concatInnerLoop;
-				}
+
+
+var index = 0;
+int outputIndexFindCounter = 0;
+outputIndexFindLoop:
+if (b[outputIndexFindCounter] == globalConcatCursor)
+{
+	index = outputIndexFindCounter;
+	goto concatInner;
+}
+if (outputIndexFindCounter++ < b.Length - 1)
+	goto outputIndexFindLoop;
+
+concatInner:
+
+var infoInnerCursor = 0;
+concatInnerLoop:
+	if(wordsInfo[index, infoInnerCursor] != 0)
+	{
+		ouputString += wordsInfo[index, infoInnerCursor] + " ";
+		infoInnerCursor++;
+		goto concatInnerLoop;
+	}
 			
-		output[globalConcatCursor] = $"{ouputString}";
-		globalConcatCursor++;
-		goto concatInfoLoop;
+	output[finalWordCounter++] = $"{ouputString}";
+	globalConcatCursor++;
+	goto concatInfoLoop;
 
 end:
 	File.WriteAllLines("out.txt", output);
